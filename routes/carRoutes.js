@@ -16,7 +16,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post('/createCar', upload.single('image'), carController.createCar);
+router.post('/createCar', carController.createCar);
+router.post('/createCar', upload.single('image'));
 
 router.get('/getAllCars', carController.getAllCars);
 

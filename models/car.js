@@ -9,7 +9,7 @@ const Car = sequelize.define('Car', {
   },
   image: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   price: {
     type: DataTypes.FLOAT, 

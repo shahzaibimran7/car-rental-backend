@@ -24,15 +24,15 @@ const uploadCarImage = async (req, res) => {
       res.status(404).json({ error: 'Car not found' });
       return;
     }
-    const image = req.file;
+    const {image }= req.body;
 
     if (!image) {
       return res.status(400).json({ error: 'Image file is required' });
     }
-
+console.log(image)
     const carImage = await CarImage.create({
       carId,
-      filename: image.filename,
+      filename: image,
     });
 
     res.status(201).json(carImage);

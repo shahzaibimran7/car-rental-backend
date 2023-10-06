@@ -7,16 +7,10 @@ const CarImage = require('../models/carImage');
 
     const createCar = async (req, res) => {
         try {
-        const { name, price, brand, transmission, fuel, doors } = req.body;
-        console.log(req.file)
-        const image = req.file;
-    
-        // if (!image) {
-        //     return res.status(400).json({ error: 'Image file is required' });
-        // }
-
+        const { name, price, brand,image, transmission, fuel, doors } = req.body;
         const newCar = await Car.create({
             name,
+            image: image,
             price,
             brand,
             transmission,
@@ -34,30 +28,25 @@ const CarImage = require('../models/carImage');
 
 
     const getAllCars = async (req, res) => {
-        try {
-          const cars = await Car.findAll();
-      
-          const carsWithImages = await Promise.all(
-            cars.map(async (car) => {
-              const imageFilePath = path.join('uploads', car.image);
-              console.log(imageFilePath)
-              const imageBuffer = await fs.promises.readFile(imageFilePath);
-      
-              const carWithImage = {
-                ...car.toJSON(),
-                image: imageBuffer.toString('base64'), 
-              };
-      
-              return carWithImage;
-            })
-          );
-      
-          res.status(200).json(carsWithImages);
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({ error: 'Error retrieving cars' });
-        }
-      };
+      try {
+        const cars = await Car.findAll();
+
+        const carsWithModifiedImages = cars.map((car) => {
+          const imageUrl = car.image;
+          const modifiedImageUrl = imageUrl.replace('/view?usp=drive_link', '/preview');
+          return {
+            ...car.toJSON(),
+            image: modifiedImageUrl,
+          };
+        });
+    
+        res.status(200).json(carsWithModifiedImages);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error retrieving cars' });
+      }
+    };
+    
 
       const getCarById = async (req, res) => {
         const { id } = req.params;
@@ -69,13 +58,13 @@ const CarImage = require('../models/carImage');
           }
       
         
-          const imageFilePath = path.join('uploads', car.image);
-          const imageBuffer = await fs.promises.readFile(imageFilePath);
+          const imageUrl = car.image;
+          const modifiedImageUrl = imageUrl.replace('/view?usp=drive_link', '/preview');
       
         
           const carWithImage = {
             ...car.toJSON(),
-            image: imageBuffer.toString('base64'), 
+            image: modifiedImageUrl,
           };
       
           res.status(200).json(carWithImage);
@@ -94,25 +83,8 @@ const CarImage = require('../models/carImage');
             res.status(404).json({ error: 'Car not found' });
             return;
           }
-      
-      
-          const prevImageFilePath = path.join('uploads', car.image);
-      
-        
-          if (fs.existsSync(prevImageFilePath)) {
-            fs.unlinkSync(prevImageFilePath);
-          }
-      
- 
-          const newImage = req.file;
-          if (newImage) {
-            const newImageFilePath = path.join('uploads', newImage.filename);
-       
-            car.image = newImage.filename; 
-          }
-      
-
-          await car.save();
+          const updatedFields = req.body;
+          await car.update(updatedFields);
       
           res.status(200).json(car);
         } catch (error) {
@@ -126,7 +98,7 @@ const CarImage = require('../models/carImage');
         try {
           const { carId } = req.params;
       
-          // Find the car by ID
+        console.log(carId,"=================================================")
           const car = await Car.findByPk(carId, {
             include: [CarImage],
           });
@@ -135,38 +107,27 @@ const CarImage = require('../models/carImage');
             res.status(404).json({ error: 'Car not found' });
             return;
           }
+
+          const mainImageUrl = car.image.replace('/view?usp=drive_link', '/preview');
       
-          // Extract and load the main car image
-          const imageFilePath = path.join('uploads', car.image);
-          const imageBuffer = await fs.promises.readFile(imageFilePath);
+          const additionalImages = car.CarImages.map((image) => {
+            const imageUrl = image.filename.replace('/view?usp=drive_link', '/preview');
+            return imageUrl;
+          });
       
-          // Extract and load additional car images
-          const carImages = await Promise.all(
-            car.CarImages.map(async (image) => {
-              const imageFilePath = path.join('uploads/', image.filename);
-              const imageBuffer = await fs.promises.readFile(imageFilePath);
-      
-              return {
-                filename: image.filename,
-                buffer: imageBuffer.toString('base64'),
-              };
-            })
-          );
-      
-          // Combine the car data with the main image and additional images
           const carWithImages = {
             ...car.toJSON(),
-            image: imageBuffer.toString('base64'),
-            additionalImages: carImages, // Include additional car images
+            image: mainImageUrl,
+            additionalImages: additionalImages,
           };
       
-          // Send the car data along with the image buffers in the response
           res.status(200).json(carWithImages);
         } catch (error) {
           console.error(error);
           res.status(500).json({ error: 'Error retrieving car and images' });
         }
       };
+      
       
 
 
@@ -178,13 +139,6 @@ const deleteCarById = async (req, res) => {
         res.status(404).json({ error: 'Car not found' });
         return;
       }
-  
-      const imageFilePath = path.join('uploads', car.image);
-  
-      if (fs.existsSync(imageFilePath)) {
-        fs.unlinkSync(imageFilePath);
-      }
-  
       await car.destroy();
   
       res.status(204).json({ message: 'Succesfully deleted a Car' });

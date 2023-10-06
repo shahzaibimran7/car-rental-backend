@@ -17,6 +17,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 // Define a route for uploading a car image
-router.post('/uploadImage', upload.single('image'), uploadCarImage);
+router.post('/uploadImage', uploadCarImage);
 
 module.exports = router;

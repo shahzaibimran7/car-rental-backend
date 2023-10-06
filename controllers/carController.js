@@ -11,13 +11,12 @@ const CarImage = require('../models/carImage');
         console.log(req.file)
         const image = req.file;
     
-        if (!image) {
-            return res.status(400).json({ error: 'Image file is required' });
-        }
+        // if (!image) {
+        //     return res.status(400).json({ error: 'Image file is required' });
+        // }
 
         const newCar = await Car.create({
             name,
-            image: image.filename,
             price,
             brand,
             transmission,

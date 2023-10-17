@@ -1,21 +1,9 @@
     const Car = require('../models/car');
-    const multer = require('multer');
     const fs = require('fs');
     const { promisify } = require('util');
     const path = require('path');
 const CarImage = require('../models/carImage');
-    const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, 'uploads/');
-        },
-        filename: (req, file, cb) => {
-            console.log("==========================",file)
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
-        },
-    });
-    
-    const upload = multer({ storage: storage });
+
 
     const createCar = async (req, res) => {
         try {
@@ -37,10 +25,10 @@ const CarImage = require('../models/carImage');
             doors,
         });
     
-        res.status(201).json(newCar);
+        return res.status(200).json(newCar);
         } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Error creating car' });
+        return res.status(500).json({ error: 'Error creating car' });
         }
     };
     
@@ -213,6 +201,5 @@ module.exports = {
   getCarById,
   updateCarById,
   deleteCarById,
-  upload,
   getCarWithImages
 };

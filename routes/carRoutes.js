@@ -1,32 +1,49 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
+// const multer = require('multer');
+const fileUpload = require("express-fileupload"); // Import express-fileupload module
+router.use(fileUpload()); // Initialize fileUpload middleware
 
-const carController = require('../controllers/carController');
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        console.log("==========================",file)
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-    },
+const carController = require("../controllers/carController");
+router.post("/createCar", (req, res) => {
+  if (!req.files || !req.files.image) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  const image = req.files.image;
+  const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+  const filename = uniqueSuffix + "-" + image.name;
+
+  image.mv("./uploads/" + filename, (err) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+
+    carController.createCar(req, res, filename);
+  });
 });
+router.get("/getAllCars", carController.getAllCars);
+router.get("/getCarsByBrand/:brand", carController.getCarByBrand);
 
-const upload = multer({ storage: storage });
+router.get("/getCarsById/:id", carController.getCarById);
 
-router.post('/createCar', upload.single('image'), carController.createCar);
+router.post("/UpdateCarById/:id", (req, res) => {
+  if (!req.files || !req.files.image) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
 
-router.get('/getAllCars', carController.getAllCars);
+  const image = req.files.image;
+  const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+  const filename = uniqueSuffix + "-" + image.name;
 
-
-router.get('/getCarsById/:id', carController.getCarById);
-
-
-router.post('/UpdateCarById/:id', upload.single('image'), carController.updateCarById);
-
-router.get('/getAllDetails/:carId', carController.getCarWithImages);
-router.post('/deleteCarById/:id', carController.deleteCarById);
+  image.mv("./uploads/" + filename, (err) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    carController.updateCarById(req, res, filename);
+  });
+});
+router.get("/getAllDetails/:carId", carController.getCarWithImages);
+router.post("/deleteCarById/:id", carController.deleteCarById);
 
 module.exports = router;

@@ -45,5 +45,6 @@ router.post("/UpdateCarById/:id", (req, res) => {
 });
 router.get("/getAllDetails/:carId", carController.getCarWithImages);
 router.post("/deleteCarById/:id", carController.deleteCarById);
+router.get("/getCarList", carController.getCarNames);
 
 module.exports = router;

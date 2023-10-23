@@ -1,11 +1,12 @@
 const Car = require("../models/car");
 const fs = require("fs");
+const zlib = require("zlib");
 const { promisify } = require("util");
 const path = require("path");
 const CarImage = require("../models/carImage");
+const sharp = require("sharp");
 
 const createCar = async (req, res, filename) => {
-  console.log("Hello");
   try {
     const { name, price, brand, transmission, fuel, doors } = req.body;
 
@@ -28,30 +29,49 @@ const createCar = async (req, res, filename) => {
 
 const getAllCars = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 cars per page
+    const { page = 1, limit = 5 } = req.query; // Default to page 1 and 10 cars per page
 
     const offset = (page - 1) * limit;
+    const totalCars = await Car.count();
 
     const cars = await Car.findAll({
       limit: parseInt(limit, 10),
       offset: offset,
     });
+
     console.log("RETRIEVED Cars", cars);
+
     const carsWithImages = await Promise.all(
       cars.map(async (car) => {
         const imageFilePath = path.join("uploads", car.image);
         const imageBuffer = await fs.promises.readFile(imageFilePath);
 
+        // Compress and resize the image using sharp
+        const compressedImageBuffer = await sharp(imageBuffer)
+          .resize(1000) // Adjust the size as needed
+          .jpeg({ quality: 80 }) // Adjust the quality as needed
+          .toBuffer();
+
         const carWithImage = {
           ...car.toJSON(),
-          image: imageBuffer.toString("base64"),
+          image:
+            "data:image/jpeg;base64," +
+            compressedImageBuffer.toString("base64"),
         };
 
         return carWithImage;
       })
     );
+    // Calculate the next page
+    const nextPage = page * limit < totalCars ? parseInt(page) + 1 : null;
 
-    res.status(200).json(carsWithImages);
+    // Prepare the response object
+    const response = {
+      page: parseInt(page),
+      nextPage,
+      cars: carsWithImages,
+    };
+    res.status(200).json(response);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error retrieving cars" });
@@ -70,9 +90,18 @@ const getCarById = async (req, res) => {
     const imageFilePath = path.join("uploads", car.image);
     const imageBuffer = await fs.promises.readFile(imageFilePath);
 
+    // Compress and resize the image using sharp
+    const compressedImageBuffer = await sharp(imageBuffer)
+      .resize(1000) // Adjust the size as needed
+      .jpeg({ quality: 80 }) // Adjust the quality as needed
+      .toBuffer();
+
+    const imageBase64 = compressedImageBuffer.toString("base64");
+    const dataURL = `data:image/jpeg;base64,${imageBase64}`;
+
     const carWithImage = {
       ...car.toJSON(),
-      image: imageBuffer.toString("base64"),
+      image: dataURL,
     };
 
     res.status(200).json(carWithImage);
@@ -126,16 +155,24 @@ const getCarWithImages = async (req, res) => {
     // Extract and load the main car image
     const imageFilePath = path.join("uploads", car.image);
     const imageBuffer = await fs.promises.readFile(imageFilePath);
-
+    const imageBase64 = imageBuffer.toString("base64");
+    const dataURL = `data:image/jpeg;base64,${imageBase64}`;
     // Extract and load additional car images
     const carImages = await Promise.all(
       car.CarImages.map(async (image) => {
         const imageFilePath = path.join("uploads/", image.filename);
         const imageBuffer = await fs.promises.readFile(imageFilePath);
+        const compressedImageBuffer = await sharp(imageBuffer)
+          .resize(700) // Adjust the size as needed
+          .jpeg({ quality: 80 }) // Adjust the quality as needed
+          .toBuffer();
+
+        const imageBase64 = compressedImageBuffer.toString("base64");
+        const dataURL = `data:image/jpeg;base64,${imageBase64}`;
 
         return {
           filename: image.filename,
-          buffer: imageBuffer.toString("base64"),
+          buffer: dataURL,
         };
       })
     );
@@ -143,7 +180,7 @@ const getCarWithImages = async (req, res) => {
     // Combine the car data with the main image and additional images
     const carWithImages = {
       ...car.toJSON(),
-      image: imageBuffer.toString("base64"),
+      image: dataURL,
       additionalImages: carImages, // Include additional car images
     };
 
@@ -180,31 +217,81 @@ const deleteCarById = async (req, res) => {
 };
 const getCarByBrand = async (req, res) => {
   const { brand } = req.params;
+  const { page = 1, limit = 5 } = req.query;
 
   try {
-    console.log("BEFORE QUERY", brand);
-    const cars = await Car.findAll({
-      where: { brand },
+    const offset = (page - 1) * limit;
+    const carCount = await Car.count({
+      where: {
+        brand: brand, // Change the brand as needed
+      },
     });
-    console.log("AFTER QUERY", cars);
-    const carsWithImages = await Promise.all(
-      cars.map(async (car) => {
-        const imageFilePath = path.join("uploads", car.image);
-        const imageBuffer = await fs.promises.readFile(imageFilePath);
 
-        const carWithImage = {
-          ...car.toJSON(),
-          image: imageBuffer.toString("base64"),
-        };
+    const cars = await Car.findAll({
+      where: {
+        brand: brand, // Change the brand as needed
+      },
+      limit: parseInt(limit, 10), // Correct the base to 10
+      offset: offset,
+    });
 
-        return carWithImage;
-      })
-    );
+    if (Array.isArray(cars) && cars.length > 0) {
+      const carsWithImages = await Promise.all(
+        cars.map(async (car) => {
+          const imageFilePath = path.join("uploads", car.image);
+          const imageBuffer = await fs.promises.readFile(imageFilePath);
 
-    res.status(200).json(carsWithImages);
+          // Compress and resize the image using sharp
+          const compressedImageBuffer = await sharp(imageBuffer)
+            .resize(700) // Adjust the size as needed
+            .jpeg({ quality: 80 }) // Adjust the quality as needed
+            .toBuffer();
+          const imageBase64 = compressedImageBuffer.toString("base64");
+          const dataURL = `data:image/jpeg;base64,${imageBase64}`;
+
+          const carWithImage = {
+            ...car.toJSON(),
+            image: dataURL,
+          };
+
+          return carWithImage;
+        })
+      );
+
+      // Calculate the next page
+      const nextPage =
+        offset + cars.length < carCount ? parseInt(page) + 1 : null;
+
+      // Prepare the response object
+      const response = {
+        page: parseInt(page),
+        nextPage: nextPage,
+        cars: carsWithImages,
+      };
+
+      res.status(200).json(response);
+    } else {
+      // Handle the case where no cars were found
+      res.status(404).json({ error: "No cars found for the specified brand" });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error retrieving cars by brand" });
+  }
+};
+
+const getCarNames = async (req, res) => {
+  try {
+    const cars = await Car.findAll({
+      attributes: ["name"], // Select only the 'name' attribute
+    });
+
+    const carNames = cars.map((car) => car.name);
+
+    res.status(200).json(carNames);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error retrieving car names" });
   }
 };
 
@@ -216,4 +303,5 @@ module.exports = {
   deleteCarById,
   getCarWithImages,
   getCarByBrand,
+  getCarNames,
 };

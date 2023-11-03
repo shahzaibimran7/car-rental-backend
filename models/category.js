@@ -11,7 +11,7 @@ const Category = sequelize.define(
     },
   },
   {
-    tableName: "category",
+    tableName: "Categories",
   }
 );
 module.exports = Category;

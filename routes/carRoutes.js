@@ -46,5 +46,17 @@ router.post("/UpdateCarById/:id", (req, res) => {
 router.get("/getAllDetails/:carId", carController.getCarWithImages);
 router.post("/deleteCarById/:id", carController.deleteCarById);
 router.get("/getCarList", carController.getCarNames);
+const categoryController = require('../controllers/categoryController');
 
+router.post('/createCategories', categoryController.createCategory);
+
+router.get('/categories/:categoryId', categoryController.getCarsByCategory);
+
+router.get('/categories', categoryController.getAllCategories);
+
+router.get('/categories/:id', categoryController.getCategoryById);
+
+router.put('/categories/:id', categoryController.updateCategory);
+
+router.delete('/categories/:id', categoryController.deleteCategory);
 module.exports = router;

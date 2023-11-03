@@ -5,11 +5,20 @@ const { promisify } = require("util");
 const path = require("path");
 const CarImage = require("../models/carImage");
 const sharp = require("sharp");
+const Category = require("../models/category");
 
 const createCar = async (req, res, filename) => {
   try {
-    const { name, price, brand, transmission, fuel, doors } = req.body;
+    const { name, price, brand, transmission, fuel, doors, categories } = req.body;
+    const existingCategories = await Category.findAll({
+      where: {
+        id: categories,
+      },
+    });
 
+    if (existingCategories.length !== categories.length) {
+      return res.status(400).json({ error: "One or more categories do not exist." });
+    }
     const newCar = await Car.create({
       name,
       image: filename,
@@ -20,12 +29,17 @@ const createCar = async (req, res, filename) => {
       doors,
     });
 
+    if (categories && categories.length > 0) {
+      await newCar.addCategories(categories);
+    }
+
     return res.status(200).json(newCar);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Error creating car" });
   }
 };
+
 
 const getAllCars = async (req, res) => {
   try {

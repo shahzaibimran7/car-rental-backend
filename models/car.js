@@ -1,40 +1,46 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/dbconnection');
-const CarImage = require('./carImage');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/dbconnection");
+const CarImage = require("./carImage");
+const Category = require("./category");
 
-const Car = sequelize.define('Car', {
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
+const Car = sequelize.define(
+  "Car",
+  {
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    price: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+    },
+    brand: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    transmission: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    fuel: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    doors: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
-  image: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  price: {
-    type: DataTypes.FLOAT, 
-    allowNull: false,
-  },
-  brand: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  transmission: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  fuel: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  doors: {
-    type: DataTypes.STRING, 
-    allowNull: false,
-  },
-}, {
-  tableName: 'car',
-});
+  {
+    tableName: "car",
+  }
+);
 
-Car.hasMany(CarImage, { foreignKey: 'carId', onDelete: 'CASCADE' });
+Car.hasMany(CarImage, { foreignKey: "carId", onDelete: "CASCADE" });
+Car.belongsToMany(Category, { through: "CarCategory", onDelete: "CASCADE" });
 
 module.exports = Car;
